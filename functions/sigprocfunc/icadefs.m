@@ -59,7 +59,12 @@ tmpvers = version;
 indp = find(tmpvers == '.');
 if str2num(tmpvers(indp(1)+1)) >= 1, tmpvers = [ tmpvers(1:indp(1)) '0' tmpvers(indp(1)+1:end) ]; end
 indp = find(tmpvers == '.');
-VERS = str2num(tmpvers(1:indp(2)-1));                            
+VERS = str2num(tmpvers(1:indp(2)-1));
+
+% Handle MATLAB 2025a and later versions properly
+if VERS >= 25.01  % MATLAB 2025a and later
+    VERS = 25.01; % Normalize to handle properly
+end                            
 
 % font size
 tmpComputer   = computer;
@@ -103,6 +108,11 @@ elseif VERS >= 8.04
         if tmpScreenSize(3) >= 1920 % bump fontsize only for the highest retina res settings
             retinaDisplay = true; %comment this out if you don't want fontsizes increased at high display resolutions
             %disp('Mac OSX retina display detected. If this is not desired comment out line 83 of icadefs.m');
+        end
+        
+        % Additional check for MATLAB 2025a and later on Mac - may need larger fonts
+        if VERS >= 25.01 && tmpScreenSize(3) >= 1920
+            retinaDisplay = true;
         end
         
         % AXES FONTSIZE
@@ -181,8 +191,26 @@ try
     set(0,'defaultaxesfontsize',AXES_FONTSIZE);
     set(0,'defaulttextfontsize',TEXT_FONTSIZE);
     set(0,'DefaultUicontrolFontSize',GUI_FONTSIZE);
+    
+    % Get the current default axes font name to ensure consistency
+    DEFAULT_FONT_NAME = get(0,'defaultaxesfontname');
+    if isempty(DEFAULT_FONT_NAME)
+        % Fallback font names for different platforms
+        if strcmpi(computer(1:3), 'MAC')
+            DEFAULT_FONT_NAME = 'Helvetica';  % Standard Mac font
+        elseif strcmpi(computer(1:2), 'PC')
+            DEFAULT_FONT_NAME = 'Arial';      % Standard PC font
+        else
+            DEFAULT_FONT_NAME = 'sans-serif'; % Generic fallback
+        end
+    end
+    
+    % Set consistent font name for all UI elements
+    set(0,'DefaultUicontrolFontName',DEFAULT_FONT_NAME);
+    set(0,'DefaultTextFontName',DEFAULT_FONT_NAME);
 catch
     % most likely Octave here
+    DEFAULT_FONT_NAME = 'Helvetica'; % Octave fallback
 end
 
 TUTORIAL_URL = 'http://sccn.ucsd.edu/wiki/EEGLAB'; % online version
@@ -213,10 +241,18 @@ else % if full color screen
     GUIBUTTONCOLOR      = BACKEEGLABCOLOR;% Buttons colors in figures
     GUIPOPBUTTONCOLOR   = BACKCOLOR;      % Buttons colors in GUI windows
     GUIBACKCOLOR        = BACKEEGLABCOLOR;% EEGLAB GUI background color <---------
-    GUITEXTCOLOR        = [0 0 0.4];      % GUI foreground color for text
+    GUITEXTCOLOR        = [0 0 0.4];        % GUI foreground color for text (black)
     PLUGINMENUCOLOR     = [.5 0 .5];      % plugin menu color
 end
 
+% Force consistent light backgrounds regardless of MATLAB theme
+set(groot,'defaultFigureColor',[0.93 0.96 1]);  % light blue figure background
+set(groot,'defaultAxesColor',[1 1 1]);          % white axes background
+set(groot,'defaultAxesXColor',[0 0 0]);         % black axis ticks/labels
+set(groot,'defaultAxesYColor',[0 0 0]);         % black axis ticks/labels
+set(groot,'defaultAxesLabelFontSizeMultiplier',1); % ensure proper label sizing
+set(groot,'defaultTextColor',[0 0 0]);          % black text
+set(groot,'defaultAxesFontWeight','normal');    % normal weight for axes text
 
 % THE FOLLOWING PARAMETERS WILL BE DEPRECATED IN LATER VERSIONS
 % -------------------------------------------------------------
